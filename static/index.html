@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Prashna.ai — CBSE Question Paper Generator</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/static/assets/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/static/assets/favicon-16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/static/assets/favicon-180.png" />
+<link rel="shortcut icon" href="/static/assets/favicon.ico" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:      #F3F1E8;
+    --paper-card: #FFFDF8;
+    --ink:        #1C2430;
+    --ink-soft:   #5B6472;
+    --maroon:     #7A1F2B;
+    --maroon-dk:  #5E1620;
+    --gold:       #A9782E;
+    --line:       #DAD4C3;
+    --line-soft:  #E8E4D6;
+    --ready:      #4B6B43;
+    --danger:     #9B2C2C;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--gold); color:#fff; }
+
+  h1,h2,h3{ font-family:'Newsreader', serif; margin:0; font-weight:500; color:var(--ink); }
+
+  a{ color:var(--maroon); }
+
+  button{ font-family:inherit; cursor:pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible{
+    outline:2px solid var(--gold); outline-offset:2px;
+  }
+  input, select{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px;
+    color:var(--ink);
+    background:transparent;
+    border:none;
+    border-bottom:1px solid var(--line);
+    padding:6px 2px;
+    width:100%;
+  }
+  input:hover, select:hover{ border-bottom-color:var(--ink-soft); }
+  input:focus, select:focus{ border-bottom-color:var(--maroon); }
+
+  .label{
+    font-size:12px;
+    letter-spacing:0.03em;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+    display:block;
+  }
+
+  .shell{ max-width:1180px; margin:0 auto; padding:28px 32px 80px; }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom:20px; margin-bottom:28px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{ flex:none; width:34px; height:34px; object-fit:contain; }
+  .brand h1{ font-size:24px; font-style:italic; letter-spacing:-0.01em; }
+  .brand .sub{ font-size:12px; color:var(--ink-soft); margin-top:1px; }
+
+  .status-row{ display:flex; align-items:center; gap:18px; }
+  .status-pill{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-soft); }
+  .dot{ width:7px; height:7px; border-radius:50%; background:var(--line); flex:none; }
+  .dot.on{ background:var(--ready); }
+  .dot.off{ background:var(--danger); }
+  .ghost-btn{
+    background:none; border:1px solid var(--line); color:var(--ink-soft);
+    font-size:12.5px; padding:6px 12px; border-radius:3px;
+  }
+  .ghost-btn:hover{ border-color:var(--ink-soft); color:var(--ink); }
+
+  /* ---------- Layout ---------- */
+  .grid{ display:grid; grid-template-columns:380px 1fr; gap:32px; align-items:start; }
+  @media (max-width:880px){ .grid{ grid-template-columns:1fr; } }
+
+  .panel{ margin-bottom:28px; }
+  .panel-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .panel-title{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:13px; font-weight:600; letter-spacing:0.04em;
+    color:var(--ink-soft);
+  }
+  .panel-hint{ font-size:12px; color:var(--ink-soft); }
+  .panel-hint button{ background:none; border:none; color:var(--maroon); font-size:12px; padding:0; text-decoration:underline; }
+
+  /* ---------- Form field rows ---------- */
+  .field{ margin-bottom:16px; }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+  /* ---------- Topics ---------- */
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+  .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    border:1px solid var(--line); border-radius:20px;
+    padding:3px 6px 3px 12px; font-size:12.5px; color:var(--ink);
+    background:var(--paper-card);
+  }
+  .chip button{
+    background:none; border:none; color:var(--ink-soft); font-size:14px;
+    width:18px; height:18px; border-radius:50%; line-height:1;
+  }
+  .chip button:hover{ background:var(--line-soft); color:var(--maroon); }
+  .add-row{ display:flex; gap:8px; }
+  .add-row input{ flex:1; }
+  .text-btn{
+    background:none; border:none; color:var(--maroon); font-size:13px;
+    padding:6px 4px; white-space:nowrap;
+  }
+  .text-btn:hover{ color:var(--maroon-dk); text-decoration:underline; }
+  .text-btn[disabled]{ color:var(--line); cursor:not-allowed; text-decoration:none; }
+
+  /* ---------- Sections ledger ---------- */
+  .ledger{ width:100%; border-collapse:collapse; }
+  .ledger th{
+    text-align:left; font-size:11px; letter-spacing:0.03em; color:var(--ink-soft);
+    font-weight:500; padding:0 6px 6px 0; border-bottom:1px solid var(--line);
+  }
+  .ledger td{ padding:8px 6px 8px 0; border-bottom:1px solid var(--line-soft); vertical-align:middle; }
+  .ledger td input, .ledger td select{ font-size:13px; border-bottom:1px solid transparent; }
+  .ledger td input:hover, .ledger td select:hover{ border-bottom-color:var(--line); }
+  .ledger .num{ width:52px; }
+  .ledger .rm{
+    background:none; border:none; color:var(--ink-soft); font-size:16px; line-height:1; padding:2px 6px;
+  }
+  .ledger .rm:hover{ color:var(--danger); }
+
+  .totals{ display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:13px; }
+  .totals.ok{ color:var(--ink-soft); }
+  .totals.mismatch{ color:var(--maroon); }
+
+  /* ---------- Buttons ---------- */
+  .btn-primary{
+    width:100%; background:var(--maroon); color:#FBF9F4; border:none;
+    padding:12px 16px; font-size:14px; font-weight:500; border-radius:3px;
+    margin-top:6px; position:relative; overflow:hidden;
+  }
+  .btn-primary:hover{ background:var(--maroon-dk); }
+  .btn-primary[disabled]{ background:var(--line); color:var(--ink-soft); cursor:wait; }
+  .btn-primary .bar{
+    position:absolute; left:0; bottom:0; height:2px; background:var(--gold);
+    width:0%; transition:width 20s linear;
+  }
+  .btn-primary.loading .bar{ width:92%; }
+
+  .btn-outline{
+    background:none; border:1px solid var(--maroon); color:var(--maroon);
+    padding:9px 14px; font-size:13px; border-radius:3px; white-space:nowrap;
+  }
+  .btn-outline:hover{ background:var(--maroon); color:#fff; }
+  .btn-outline[disabled]{ border-color:var(--line); color:var(--ink-soft); cursor:not-allowed; background:none; }
+
+  /* ---------- Preview "paper" card ---------- */
+  .paper-card{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-top:3px solid var(--maroon);
+    border-radius:2px;
+    box-shadow:0 1px 2px rgba(28,36,48,0.05), 0 10px 28px rgba(28,36,48,0.07);
+    padding:22px 24px;
+  }
+  .letterhead{ text-align:center; padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--line); }
+  .letterhead .board{ font-size:11px; letter-spacing:0.08em; color:var(--ink-soft); }
+  .letterhead .subject{ font-size:20px; margin-top:2px; }
+  .letterhead .meta{ font-size:12px; color:var(--ink-soft); margin-top:4px; }
+  .letterhead.empty .subject{ color:var(--ink-soft); font-style:italic; }
+
+  .pdf-frame{ width:100%; height:560px; border:1px solid var(--line-soft); background:#fff; }
+
+  .empty-preview{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    height:560px; color:var(--ink-soft); gap:14px; text-align:center; padding:0 30px;
+  }
+  .empty-preview svg{ opacity:0.55; }
+  .empty-preview p{ font-size:13.5px; max-width:280px; margin:0; }
+
+  .download-row{ display:flex; gap:0; margin-top:14px; font-size:13px; }
+  .download-row a{ padding:0 14px; text-decoration:none; }
+  .download-row a:first-child{ padding-left:0; }
+  .download-row a:not(:last-child){ border-right:1px solid var(--line); }
+  .download-row a.disabled{ color:var(--line); pointer-events:none; }
+
+  details.source-view{ margin-top:16px; }
+  details.source-view summary{ font-size:12.5px; color:var(--ink-soft); cursor:pointer; }
+  details.source-view summary:hover{ color:var(--ink); }
+  details.source-view pre{
+    margin-top:10px; max-height:280px; overflow:auto; background:var(--ink);
+    color:#E7E2D3; font-family:'IBM Plex Mono', monospace; font-size:12px;
+    padding:14px; border-radius:3px; white-space:pre-wrap; word-break:break-word;
+  }
+
+  /* ---------- Refine + history ---------- */
+  .refine-row{ display:flex; gap:12px; align-items:flex-end; }
+  .refine-row .qnum{ width:60px; flex:none; }
+  .refine-row .instr{ flex:1; }
+  .refine-hint{ font-size:12.5px; color:var(--ink-soft); }
+
+  .history-list{ list-style:none; margin:0; padding:0; }
+  .history-list li{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 0; border-bottom:1px solid var(--line-soft);
+    font-size:13px; cursor:pointer;
+  }
+  .history-list li:hover .hist-subject{ color:var(--maroon); }
+  .history-list li.stale{ opacity:0.45; cursor:default; }
+  .hist-left{ display:flex; flex-direction:column; }
+  .hist-subject{ color:var(--ink); }
+  .hist-meta{ font-size:11.5px; color:var(--ink-soft); margin-top:1px; }
+  .hist-time{ font-size:11.5px; color:var(--ink-soft); }
+  .empty-note{ font-size:13px; color:var(--ink-soft); font-style:italic; }
+
+  /* ---------- Error notice ---------- */
+  .notice{
+    border-left:3px solid var(--maroon); background:var(--paper-card);
+    padding:12px 16px; margin-bottom:24px; font-size:13px; display:none;
+  }
+  .notice.show{ display:block; }
+  .notice .head{ display:flex; justify-content:space-between; gap:16px; }
+  .notice .msg{ color:var(--ink); }
+  .notice code{ display:block; margin-top:8px; font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+    color:var(--ink-soft); background:var(--paper); padding:8px 10px; border-radius:2px; max-height:120px; overflow:auto; }
+  .notice .dismiss{ background:none; border:none; color:var(--ink-soft); font-size:12px; text-decoration:underline; flex:none; }
+
+  footer{ margin-top:56px; padding-top:16px; border-top:1px solid var(--line); font-size:12px; color:var(--ink-soft); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="brand">
+      <img src="/static/assets/prashna-logo-icon-cropped.png" alt="Prashna.ai" class="brand-mark" />
+      <div>
+        <h1>Prashna.ai</h1>
+        <div class="sub">CBSE question paper generator</div>
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-pill"><span class="dot" id="dot-gemini"></span> Gemini</div>
+      <div class="status-pill"><span class="dot" id="dot-tavily"></span> Search</div>
+      <div class="status-pill"><span class="dot" id="dot-latex"></span> LaTeX</div>
+      <button class="ghost-btn" id="btn-selftest">Run diagnostic</button>
+    </div>
+  </div>
+
+  <div class="notice" id="notice">
+    <div class="head">
+      <div class="msg" id="notice-msg"></div>
+      <button class="dismiss" id="notice-dismiss">Dismiss</button>
+    </div>
+    <code id="notice-detail" style="display:none;"></code>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT: configuration -->
+    <div>
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Configure the paper</span>
+          <span class="panel-hint"><button id="btn-reset">Reset to default</button></span>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label class="label">Board</label>
+            <input id="f-board" value="CBSE" />
+          </div>
+          <div class="field">
+            <label class="label">Class</label>
+            <input id="f-class" value="10" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label">Subject</label>
+          <input id="f-subject" value="Mathematics" />
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label class="label">Duration (minutes)</label>
+            <input id="f-duration" type="number" min="10" step="5" value="180" />
+          </div>
+          <div class="field">
+            <label class="label">Maximum marks</label>
+            <input id="f-maxmarks" type="number" min="1" value="80" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label">Model</label>
+          <select id="f-model">
+            <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite — free tier</option>
+            <option value="gemini-3.1-flash">gemini-3.1-flash — free tier, higher quality</option>
+            <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview — requires billing</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="label">Topics</label>
+          <div class="chips" id="chips-topics"></div>
+          <div class="add-row">
+            <input id="f-topic-add" placeholder="Add a topic and press Enter" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label">Sections</label>
+          <table class="ledger">
+            <thead>
+              <tr><th>Name</th><th>Type</th><th>Qs</th><th>Marks</th><th>Difficulty</th><th></th></tr>
+            </thead>
+            <tbody id="sections-body"></tbody>
+          </table>
+          <button class="text-btn" id="btn-add-section" style="margin-top:8px;">+ Add section</button>
+          <div class="totals" id="totals-line">Total: 0 / 0 marks</div>
+        </div>
+
+        <button class="btn-primary" id="btn-generate">
+          <span id="btn-generate-label">Generate paper</span>
+          <span class="bar"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- RIGHT: preview, refine, history -->
+    <div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Preview</span></div>
+        <div class="paper-card" id="preview-card">
+          <div class="letterhead empty" id="letterhead">
+            <div class="board">—</div>
+            <div class="subject">No paper generated yet</div>
+            <div class="meta">&nbsp;</div>
+          </div>
+          <div class="empty-preview" id="preview-empty">
+            <svg width="46" height="56" viewBox="0 0 46 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 2H30L42 14V54H4V2Z" stroke="#5B6472" stroke-width="1.3"/>
+              <path d="M30 2V14H42" stroke="#5B6472" stroke-width="1.3"/>
+              <path d="M11 26H35M11 34H35M11 42H26" stroke="#5B6472" stroke-width="1.1"/>
+            </svg>
+            <p>Your paper will appear here once generated. Fill in the sections on the left, then generate.</p>
+          </div>
+          <iframe class="pdf-frame" id="pdf-frame" style="display:none;"></iframe>
+          <div class="download-row" id="download-row">
+            <a href="#" class="disabled" id="dl-pdf">Download PDF</a>
+            <a href="#" class="disabled" id="dl-tex">Download .tex</a>
+            <a href="#" class="disabled" id="dl-txt">Download .txt</a>
+          </div>
+          <details class="source-view">
+            <summary id="source-toggle">View LaTeX source</summary>
+            <pre id="source-pre">Generate a paper to view its LaTeX source.</pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Refine a question</span></div>
+        <div class="refine-row">
+          <div class="qnum">
+            <label class="label">Q#</label>
+            <input id="f-qnum" type="number" min="1" value="1" disabled />
+          </div>
+          <div class="instr">
+            <label class="label">Instruction</label>
+            <input id="f-instruction" placeholder="e.g. make this question harder" disabled />
+          </div>
+          <button class="btn-outline" id="btn-edit" disabled>Apply edit</button>
+        </div>
+        <div class="refine-hint" id="refine-hint" style="margin-top:8px;">Generate a paper first to enable edits.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">History</span>
+          <span class="panel-hint"><button id="btn-clear-history">Clear history</button></span>
+        </div>
+        <ul class="history-list" id="history-list"></ul>
+        <div class="empty-note" id="history-empty">Nothing generated yet this session.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Prashna.ai — built with FastAPI, LangGraph, Gemini and LaTeX. Papers are held in memory and are lost if the server restarts.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const DEFAULT_CONFIG = {
+    board: "CBSE",
+    class_name: "10",
+    subject: "Mathematics",
+    duration_minutes: 180,
+    max_marks: 80,
+    model_name: "gemini-3.1-flash-lite",
+    topics: ["Real Numbers","Polynomials","Quadratic Equations","Triangles","Coordinate Geometry","Trigonometry","Circles","Statistics","Probability"],
+    sections: [
+      {name:"Section A", question_type:"MCQ", num_questions:4, marks_each:1, difficulty:"easy"},
+      {name:"Section B", question_type:"Short Answer", num_questions:3, marks_each:2, difficulty:"medium"},
+      {name:"Section C", question_type:"Short Answer", num_questions:2, marks_each:3, difficulty:"medium"},
+      {name:"Section D", question_type:"Long Answer", num_questions:2, marks_each:5, difficulty:"hard"},
+      {name:"Section E", question_type:"Case Study", num_questions:1, marks_each:4, difficulty:"mixed"},
+    ],
+  };
+
+  const QUESTION_TYPES = ["MCQ","Very Short Answer","Short Answer","Long Answer","Case Study","Assertion-Reason"];
+  const DIFFICULTIES = ["easy","medium","hard","mixed"];
+
+  let state = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  let currentPaperId = null;
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---------------- Rendering ----------------
+  function renderTopics(){
+    const wrap = $("chips-topics");
+    wrap.innerHTML = "";
+    state.topics.forEach((t, i) => {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.innerHTML = `<span></span><button type="button" aria-label="Remove ${t}">×</button>`;
+      chip.querySelector("span").textContent = t;
+      chip.querySelector("button").addEventListener("click", () => {
+        state.topics.splice(i, 1);
+        renderTopics();
+      });
+      wrap.appendChild(chip);
+    });
+  }
+
+  function renderSections(){
+    const body = $("sections-body");
+    body.innerHTML = "";
+    state.sections.forEach((s, i) => {
+      const tr = document.createElement("tr");
+
+      const tdName = document.createElement("td");
+      const inName = document.createElement("input");
+      inName.value = s.name;
+      inName.addEventListener("input", e => { state.sections[i].name = e.target.value; });
+      tdName.appendChild(inName);
+
+      const tdType = document.createElement("td");
+      const selType = document.createElement("select");
+      QUESTION_TYPES.forEach(opt => {
+        const o = document.createElement("option");
+        o.value = opt; o.textContent = opt;
+        if (opt === s.question_type) o.selected = true;
+        selType.appendChild(o);
+      });
+      selType.addEventListener("change", e => { state.sections[i].question_type = e.target.value; });
+      tdType.appendChild(selType);
+
+      const tdCount = document.createElement("td");
+      tdCount.className = "num";
+      const inCount = document.createElement("input");
+      inCount.type = "number"; inCount.min = "1"; inCount.value = s.num_questions;
+      inCount.addEventListener("input", e => { state.sections[i].num_questions = parseInt(e.target.value || "0", 10); renderTotals(); });
+      tdCount.appendChild(inCount);
+
+      const tdMarks = document.createElement("td");
+      tdMarks.className = "num";
+      const inMarks = document.createElement("input");
+      inMarks.type = "number"; inMarks.min = "1"; inMarks.value = s.marks_each;
+      inMarks.addEventListener("input", e => { state.sections[i].marks_each = parseInt(e.target.value || "0", 10); renderTotals(); });
+      tdMarks.appendChild(inMarks);
+
+      const tdDiff = document.createElement("td");
+      const selDiff = document.createElement("select");
+      DIFFICULTIES.forEach(opt => {
+        const o = document.createElement("option");
+        o.value = opt; o.textContent = opt;
+        if (opt === s.difficulty) o.selected = true;
+        selDiff.appendChild(o);
+      });
+      selDiff.addEventListener("change", e => { state.sections[i].difficulty = e.target.value; });
+      tdDiff.appendChild(selDiff);
+
+      const tdRm = document.createElement("td");
+      const btnRm = document.createElement("button");
+      btnRm.className = "rm"; btnRm.textContent = "×"; btnRm.type = "button";
+      btnRm.addEventListener("click", () => { state.sections.splice(i, 1); renderSections(); renderTotals(); });
+      tdRm.appendChild(btnRm);
+
+      tr.append(tdName, tdType, tdCount, tdMarks, tdDiff, tdRm);
+      body.appendChild(tr);
+    });
+    renderTotals();
+  }
+
+  function renderTotals(){
+    const total = state.sections.reduce((sum, s) => sum + (s.num_questions * s.marks_each || 0), 0);
+    const max = parseInt($("f-maxmarks").value || "0", 10);
+    const el = $("totals-line");
+    el.textContent = `Total: ${total} / ${max} marks`;
+    el.className = "totals " + (total === max ? "ok" : "mismatch");
+  }
+
+  function fillFormFromState(){
+    $("f-board").value = state.board;
+    $("f-class").value = state.class_name;
+    $("f-subject").value = state.subject;
+    $("f-duration").value = state.duration_minutes;
+    $("f-maxmarks").value = state.max_marks;
+    $("f-model").value = state.model_name;
+    renderTopics();
+    renderSections();
+  }
+
+  function collectConfig(){
+    return {
+      board: $("f-board").value.trim() || "CBSE",
+      class_name: $("f-class").value.trim() || "10",
+      subject: $("f-subject").value.trim() || "General",
+      duration_minutes: parseInt($("f-duration").value || "180", 10),
+      max_marks: parseInt($("f-maxmarks").value || "80", 10),
+      model_name: $("f-model").value,
+      topics: state.topics,
+      sections: state.sections,
+    };
+  }
+
+  // ---------------- Notice / errors ----------------
+  function showError(message, detail){
+    $("notice-msg").textContent = message;
+    const codeEl = $("notice-detail");
+    if (detail){
+      codeEl.textContent = detail;
+      codeEl.style.display = "block";
+    } else {
+      codeEl.style.display = "none";
+    }
+    $("notice").classList.add("show");
+  }
+  function hideError(){ $("notice").classList.remove("show"); }
+  $("notice-dismiss").addEventListener("click", hideError);
+
+  async function parseErrorBody(resp){
+    try{
+      const body = await resp.json();
+      if (body.error || body.detail){
+        return { message: `Request failed — ${body.error || resp.status}`, detail: body.detail || "" };
+      }
+      return { message: `Request failed (${resp.status})`, detail: JSON.stringify(body) };
+    } catch(e){
+      return { message: `Request failed (${resp.status})`, detail: "" };
+    }
+  }
+
+  // ---------------- Status pills ----------------
+  async function loadHealth(){
+    try{
+      const resp = await fetch("/api/health");
+      const data = await resp.json();
+      setDot("dot-gemini", data.gemini_configured);
+      setDot("dot-tavily", data.tavily_configured);
+      setDot("dot-latex", data.pdflatex_found);
+    } catch(e){
+      ["dot-gemini","dot-tavily","dot-latex"].forEach(id => setDot(id, false));
+    }
+  }
+  function setDot(id, ok){
+    const el = $(id);
+    el.classList.remove("on","off");
+    el.classList.add(ok ? "on" : "off");
+  }
+
+  // ---------------- Preview ----------------
+  function setPreview(paperId, meta){
+    currentPaperId = paperId;
+    const lh = $("letterhead");
+    lh.classList.remove("empty");
+    lh.querySelector(".board").textContent = (meta.board || "").toUpperCase();
+    lh.querySelector(".subject").textContent = meta.subject || "Untitled paper";
+    lh.querySelector(".meta").textContent = meta.class_name && meta.class_name !== "-" ? `Class ${meta.class_name}` : "\u00A0";
+
+    $("preview-empty").style.display = "none";
+    const frame = $("pdf-frame");
+    frame.style.display = "block";
+    frame.src = `/api/papers/${paperId}/download?format=pdf&t=${Date.now()}`;
+
+    ["pdf","tex","txt"].forEach(fmt => {
+      const a = $("dl-" + fmt);
+      a.href = `/api/papers/${paperId}/download?format=${fmt}`;
+      a.classList.remove("disabled");
+      a.setAttribute("download", `${paperId}.${fmt}`);
+    });
+
+    $("f-qnum").disabled = false;
+    $("f-instruction").disabled = false;
+    $("btn-edit").disabled = false;
+    $("refine-hint").textContent = `Editing paper ${paperId}. Refer to questions by their number in the paper.`;
+
+    $("source-pre").textContent = "Click to load the LaTeX source.";
+    sourceLoadedFor = null;
+  }
+
+  let sourceLoadedFor = null;
+  $("source-toggle").addEventListener("click", async () => {
+    if (!currentPaperId) return;
+    const details = document.querySelector("details.source-view");
+    setTimeout(async () => {
+      if (details.open && sourceLoadedFor !== currentPaperId){
+        try{
+          const resp = await fetch(`/api/papers/${currentPaperId}/download?format=tex`);
+          if (!resp.ok) throw new Error();
+          $("source-pre").textContent = await resp.text();
+          sourceLoadedFor = currentPaperId;
+        } catch(e){
+          $("source-pre").textContent = "Could not load source for this paper.";
+        }
+      }
+    }, 0);
+  });
+
+  // ---------------- History ----------------
+  const HISTORY_KEY = "prashna_history_v1";
+  function loadHistory(){
+    try{ return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); }
+    catch(e){ return []; }
+  }
+  function saveHistory(items){ localStorage.setItem(HISTORY_KEY, JSON.stringify(items)); }
+  function addToHistory(paperId, meta){
+    const items = loadHistory().filter(h => h.paper_id !== paperId);
+    items.unshift({ paper_id: paperId, meta, created_at: new Date().toISOString() });
+    saveHistory(items.slice(0, 30));
+  }
+
+  async function renderHistory(){
+    const items = loadHistory();
+    const list = $("history-list");
+    list.innerHTML = "";
+    $("history-empty").style.display = items.length ? "none" : "block";
+
+    let liveIds = new Set();
+    try{
+      const resp = await fetch("/api/papers");
+      const data = await resp.json();
+      liveIds = new Set(data.papers.map(p => p.paper_id));
+    } catch(e){ /* server list unavailable, treat all as unknown-but-clickable */ }
+
+    items.forEach(h => {
+      const li = document.createElement("li");
+      const isStale = liveIds.size > 0 && !liveIds.has(h.paper_id);
+      if (isStale) li.classList.add("stale");
+
+      const left = document.createElement("div");
+      left.className = "hist-left";
+      const subj = document.createElement("span");
+      subj.className = "hist-subject";
+      subj.textContent = `${h.meta.subject || "Untitled"}${h.meta.class_name && h.meta.class_name !== "-" ? " · Class " + h.meta.class_name : ""}`;
+      const meta = document.createElement("span");
+      meta.className = "hist-meta";
+      meta.textContent = isStale ? `${h.paper_id} — no longer on server` : h.paper_id;
+      left.append(subj, meta);
+
+      const time = document.createElement("span");
+      time.className = "hist-time";
+      const d = new Date(h.created_at);
+      time.textContent = isNaN(d) ? "" : d.toLocaleString(undefined, {hour:"2-digit", minute:"2-digit", month:"short", day:"numeric"});
+
+      li.append(left, time);
+      if (!isStale){
+        li.addEventListener("click", () => setPreview(h.paper_id, h.meta));
+      }
+      list.appendChild(li);
+    });
+  }
+
+  $("btn-clear-history").addEventListener("click", () => {
+    saveHistory([]);
+    renderHistory();
+  });
+
+  // ---------------- Actions ----------------
+  $("f-topic-add").addEventListener("keydown", (e) => {
+    if (e.key === "Enter"){
+      e.preventDefault();
+      const val = e.target.value.trim();
+      if (val && !state.topics.includes(val)){
+        state.topics.push(val);
+        renderTopics();
+      }
+      e.target.value = "";
+    }
+  });
+
+  $("btn-add-section").addEventListener("click", () => {
+    state.sections.push({ name: `Section ${String.fromCharCode(65 + state.sections.length)}`, question_type: "Short Answer", num_questions: 1, marks_each: 2, difficulty: "medium" });
+    renderSections();
+  });
+
+  $("f-maxmarks").addEventListener("input", renderTotals);
+
+  $("btn-reset").addEventListener("click", () => {
+    state = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    fillFormFromState();
+    hideError();
+  });
+
+  async function setGenerating(isLoading, label){
+    const btn = $("btn-generate");
+    btn.disabled = isLoading;
+    btn.classList.toggle("loading", isLoading);
+    $("btn-generate-label").textContent = label;
+  }
+
+  $("btn-generate").addEventListener("click", async () => {
+    hideError();
+    const cfg = collectConfig();
+    await setGenerating(true, "Generating…");
+    try{
+      const resp = await fetch("/api/generate-paper", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cfg),
+      });
+      if (!resp.ok){
+        const { message, detail } = await parseErrorBody(resp);
+        showError(message, detail);
+        return;
+      }
+      const data = await resp.json();
+      const meta = { board: cfg.board, class_name: cfg.class_name, subject: cfg.subject };
+      setPreview(data.paper_id, meta);
+      addToHistory(data.paper_id, meta);
+      renderHistory();
+    } catch(e){
+      showError("Could not reach the server.", String(e));
+    } finally {
+      await setGenerating(false, "Generate paper");
+    }
+  });
+
+  $("btn-selftest").addEventListener("click", async () => {
+    hideError();
+    const btn = $("btn-selftest");
+    btn.disabled = true;
+    btn.textContent = "Running…";
+    try{
+      const resp = await fetch("/api/papers/self-test", { method: "POST" });
+      if (!resp.ok){
+        const { message, detail } = await parseErrorBody(resp);
+        showError(message, detail);
+        return;
+      }
+      const meta = { board: "Diagnostic", class_name: "-", subject: "Self-test paper" };
+      setPreview("self-test", meta);
+      addToHistory("self-test", meta);
+      renderHistory();
+    } catch(e){
+      showError("Could not reach the server.", String(e));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Run diagnostic";
+    }
+  });
+
+  $("btn-edit").addEventListener("click", async () => {
+    if (!currentPaperId) return;
+    hideError();
+    const qnum = parseInt($("f-qnum").value || "1", 10);
+    const instruction = $("f-instruction").value.trim();
+    if (!instruction){ showError("Write an instruction before applying an edit."); return; }
+
+    const btn = $("btn-edit");
+    btn.disabled = true;
+    btn.textContent = "Applying…";
+    try{
+      const resp = await fetch(`/api/papers/${currentPaperId}/edit-question`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question_number: qnum, instruction }),
+      });
+      if (!resp.ok){
+        const { message, detail } = await parseErrorBody(resp);
+        showError(message, detail);
+        return;
+      }
+      $("pdf-frame").src = `/api/papers/${currentPaperId}/download?format=pdf&t=${Date.now()}`;
+      sourceLoadedFor = null;
+      $("f-instruction").value = "";
+    } catch(e){
+      showError("Could not reach the server.", String(e));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Apply edit";
+    }
+  });
+
+  // ---------------- Init ----------------
+  fillFormFromState();
+  loadHealth();
+  renderHistory();
+})();
+</script>
+</body>
+</html>

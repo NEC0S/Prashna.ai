@@ -1,0 +1,14 @@
+google-generativeai
+langchain
+langchain-google-genai
+langgraph
+langchain-community
+tavily-python
+nbformat
+pypdf
+python-dotenv
+jupyter
+ipykernel
+fastapi
+uvicorn[standard]
+pydantic

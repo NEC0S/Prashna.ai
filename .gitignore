@@ -1,0 +1,45 @@
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.Python
+build/
+dist/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Jupyter notebooks ---
+.ipynb_checkpoints/
+# Keep the notebook itself, but drop its checkpoint clutter above.
+
+# --- Generated papers / LaTeX build artifacts ---
+# These are the runtime OUTPUT_DIR / BUILD_DIR paths from main.py.
+# Only relevant if you ever run the app with paths pointed inside the repo
+# instead of /app/output and /app/build (e.g. local dev overrides).
+output/
+build/
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# --- Editor / OS cruft ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Docker ---
+*.pid
