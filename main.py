@@ -1,16 +1,19 @@
 import copy
+import json
 import os
 import re
-import json
 import shutil
 import subprocess
+import threading
+import time
 import traceback
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -113,6 +116,37 @@ DEFAULT_CONFIG: Dict[str, Any] = {
 # A real deployment should replace this with Postgres + S3/Supabase Storage,
 # same as the career-agent-saas / ClaimPilot pattern.
 PAPERS: Dict[str, Dict[str, Any]] = {}
+
+# In-memory job registry, used to report live progress for the async
+# generation endpoint below - same "swap for Postgres later" caveat as
+# PAPERS. Each job: {"status": "generating"|"compiling"|"done"|"error",
+# "log": [str, ...], "paper_id": str|None, "error": str|None}.
+JOBS: Dict[str, Dict[str, Any]] = {}
+_JOBS_LOCK = threading.Lock()
+
+
+def _job_create(job_id: str):
+    with _JOBS_LOCK:
+        JOBS[job_id] = {"status": "generating", "log": [], "paper_id": None, "error": None}
+
+
+def _job_log(job_id: str, message: str):
+    with _JOBS_LOCK:
+        if job_id in JOBS:
+            JOBS[job_id]["log"].append(message)
+
+
+def _job_set(job_id: str, **kwargs):
+    with _JOBS_LOCK:
+        if job_id in JOBS:
+            JOBS[job_id].update(kwargs)
+
+
+def _job_snapshot(job_id: str) -> Optional[Dict[str, Any]]:
+    with _JOBS_LOCK:
+        job = JOBS.get(job_id)
+        return dict(job) if job else None
+
 
 _MODEL_CACHE: Dict[str, Any] = {}
 
@@ -573,27 +607,95 @@ MAX_QUESTIONS_PER_CALL = 8
 # Large sections (e.g. an 18-question MCQ Section A) asked for in one shot
 # are the most likely thing to get cut off mid-JSON, since Gemini 3.x models
 # spend part of the output budget on internal "thinking" before the answer.
-# Splitting into smaller batches keeps each call well within budget.
+# Splitting into smaller batches keeps each call well within budget, and -
+# since the batches don't depend on each other - lets them run concurrently
+# instead of one-after-another, which is most of where the ~10 minute wall
+# time was going.
+BATCH_CONCURRENCY = 3
+# Free-tier Gemini rate limits are typically ~10-30 requests/minute, so this
+# stays modest rather than firing every batch across every section at once.
 
 
-def generate_section_questions(section: Dict[str, Any], config: Dict[str, Any], model, search_context: str = ""):
+def _effective_batch_cap(section: Dict[str, Any]) -> int:
+    """Internal-choice sections carry a full primary AND alternative question
+    per item (roughly double the text of a plain question), and Case Study
+    items carry a passage plus several subparts. Both are heavier per-item
+    than MAX_QUESTIONS_PER_CALL assumes, so pre-emptively use a smaller cap
+    for them instead of relying only on the reactive retry-and-split below."""
+    cap = MAX_QUESTIONS_PER_CALL
+    if section.get("internal_choice"):
+        cap = max(1, cap // 2)
+    if (section.get("question_type") or "").lower() == "case study":
+        cap = max(1, cap // 2)
+    return cap
+
+
+def generate_section_questions(
+    section: Dict[str, Any],
+    config: Dict[str, Any],
+    model,
+    search_context: str = "",
+    job_id: Optional[str] = None,
+):
     if model is None:
         raise RuntimeError("Gemini model not initialised - set GEMINI_API_KEY.")
 
     count = section["num_questions"]
-    if count > MAX_QUESTIONS_PER_CALL:
-        questions: List[Any] = []
-        remaining = count
-        while remaining > 0:
-            batch_size = min(MAX_QUESTIONS_PER_CALL, remaining)
-            batch_section = {**section, "num_questions": batch_size}
-            questions.extend(
-                _generate_question_batch(batch_section, config, model, search_context)
-            )
-            remaining -= batch_size
+    cap = _effective_batch_cap(section)
+    if count <= cap:
+        questions = _generate_batch_resilient(section, config, model, search_context)
+        if job_id:
+            _job_log(job_id, f"Generated {section['name']} ({len(questions)} questions)")
         return questions
 
-    return _generate_question_batch(section, config, model, search_context)
+    batches: List[Dict[str, Any]] = []
+    remaining = count
+    while remaining > 0:
+        batch_size = min(cap, remaining)
+        batches.append({**section, "num_questions": batch_size})
+        remaining -= batch_size
+
+    results: List[Optional[List[Any]]] = [None] * len(batches)
+    with ThreadPoolExecutor(max_workers=min(BATCH_CONCURRENCY, len(batches))) as ex:
+        future_to_idx = {
+            ex.submit(_generate_batch_resilient, b, config, model, search_context): i
+            for i, b in enumerate(batches)
+        }
+        done_count = 0
+        for future in as_completed(future_to_idx):
+            idx = future_to_idx[future]
+            results[idx] = future.result()
+            done_count += 1
+            if job_id:
+                _job_log(job_id, f"{section['name']}: batch {done_count}/{len(batches)} done")
+
+    questions = []
+    for batch_result in results:
+        questions.extend(batch_result or [])
+    return questions
+
+
+def _generate_batch_resilient(section: Dict[str, Any], config: Dict[str, Any], model, search_context: str = ""):
+    """Generates one batch; if the model's JSON comes back truncated (the
+    usual cause is one batch being heavier than expected - long internal-
+    choice questions, verbose case studies, etc.), automatically retries
+    with the batch split in half instead of failing the whole paper.
+    Recurses down to single-question calls if needed; only raises once even
+    a single question can't be parsed, since there's nothing smaller left
+    to try at that point."""
+    count = section["num_questions"]
+    try:
+        return _generate_question_batch(section, config, model, search_context)
+    except ValueError:
+        if count <= 1:
+            raise
+        half = count // 2
+        first = {**section, "num_questions": half}
+        second = {**section, "num_questions": count - half}
+        return (
+            _generate_batch_resilient(first, config, model, search_context)
+            + _generate_batch_resilient(second, config, model, search_context)
+        )
 
 
 def _generate_question_batch(section: Dict[str, Any], config: Dict[str, Any], model, search_context: str = ""):
@@ -734,23 +836,40 @@ class PaperState(TypedDict):
     compile_ok: bool
     compile_log: str
     retries: int
+    job_id: Optional[str]
 
 
 def node_generate_sections(state: PaperState):
     config = state["config"]
+    job_id = state.get("job_id")
     model = get_model(config.get("model_name"))
-    sections_data = []
-    for section in config["sections"]:
+    sections = config["sections"]
+
+    def _run_section(section):
         ctx_snippets: List[str] = []
         for topic in config["topics"][:2]:
             ctx_snippets.extend(search_reference_questions(topic))
-        questions = generate_section_questions(section, config, model, "\n".join(ctx_snippets))
-        sections_data.append({"section": section, "questions": questions})
-    return {"sections_data": sections_data}
+        questions = generate_section_questions(
+            section, config, model, "\n".join(ctx_snippets), job_id=job_id
+        )
+        return {"section": section, "questions": questions}
+
+    # Sections are independent of each other, so - like the question batches
+    # inside each one - they run concurrently instead of in a strict loop.
+    results: List[Optional[Dict[str, Any]]] = [None] * len(sections)
+    with ThreadPoolExecutor(max_workers=min(BATCH_CONCURRENCY, len(sections))) as ex:
+        future_to_idx = {ex.submit(_run_section, s): i for i, s in enumerate(sections)}
+        for future in as_completed(future_to_idx):
+            results[future_to_idx[future]] = future.result()
+
+    return {"sections_data": results}
 
 
 def node_assemble_latex(state: PaperState):
     config = state["config"]
+    job_id = state.get("job_id")
+    if job_id:
+        _job_log(job_id, "Assembling LaTeX...")
     model = get_model(config.get("model_name"))
     body = build_latex_header(config)
     body += render_general_instructions(config)
@@ -782,11 +901,19 @@ def node_assemble_latex(state: PaperState):
 
 
 def node_compile(state: PaperState):
+    job_id = state.get("job_id")
+    if job_id:
+        _job_log(job_id, "Compiling PDF...")
     ok, log = _compile_string(state["latex_body"], "generated_paper", BUILD_DIR)
+    if job_id:
+        _job_log(job_id, "PDF compiled successfully" if ok else "PDF compile failed, attempting a fix...")
     return {"compile_ok": ok, "compile_log": log}
 
 
 def node_fix_errors(state: PaperState):
+    job_id = state.get("job_id")
+    if job_id:
+        _job_log(job_id, f"Fix attempt {state.get('retries', 0) + 1}...")
     fix_prompt = f"""This full CBSE exam LaTeX document failed to compile.
 
 COMPILER ERROR (tail):
@@ -979,13 +1106,18 @@ def self_test():
 
 @api.post("/generate-paper")
 def generate_paper(config: PaperConfig = None):
+    """Synchronous generation - blocks until the paper is done. Kept for
+    backwards compatibility / scripts; the UI should use
+    /generate-paper/start + /jobs/{job_id}/stream instead, since that path
+    now runs sections concurrently and reports live progress instead of
+    leaving the customer staring at a blank spinner for several minutes."""
     if get_model() is None:
         raise HTTPException(status_code=400, detail="GEMINI_API_KEY not set on the server.")
     cfg = config.dict() if config else DEFAULT_CONFIG
 
     final_state = paper_graph.invoke({
         "config": cfg, "sections_data": [], "latex_body": "",
-        "compile_ok": False, "compile_log": "", "retries": 0,
+        "compile_ok": False, "compile_log": "", "retries": 0, "job_id": None,
     })
 
     paper_id = str(uuid.uuid4())[:8]
@@ -999,6 +1131,81 @@ def generate_paper(config: PaperConfig = None):
         "model_name": cfg.get("model_name", DEFAULT_CONFIG["model_name"]),
     }
     return {"paper_id": paper_id, "compiled": True}
+
+
+def _run_generation_job(job_id: str, cfg: Dict[str, Any]):
+    """Runs the full generate -> assemble -> compile (-> fix -> recompile)
+    pipeline in a background thread, writing progress into JOBS[job_id] as
+    it goes so /jobs/{job_id}/stream has something to report."""
+    try:
+        final_state = paper_graph.invoke({
+            "config": cfg, "sections_data": [], "latex_body": "",
+            "compile_ok": False, "compile_log": "", "retries": 0, "job_id": job_id,
+        })
+
+        if not final_state["compile_ok"]:
+            _job_set(job_id, status="error", error=final_state["compile_log"][-1500:])
+            return
+
+        paper_id = str(uuid.uuid4())[:8]
+        _job_log(job_id, "Saving output files...")
+        save_outputs(final_state["latex_body"], paper_id, OUTPUT_DIR)
+        PAPERS[paper_id] = {
+            "latex": final_state["latex_body"],
+            "compiled": True,
+            "model_name": cfg.get("model_name", DEFAULT_CONFIG["model_name"]),
+        }
+        _job_log(job_id, "Done.")
+        _job_set(job_id, status="done", paper_id=paper_id)
+    except Exception as exc:  # noqa: BLE001 - report to the job, don't crash the thread silently
+        _job_set(job_id, status="error", error=f"{type(exc).__name__}: {exc}")
+
+
+@api.post("/generate-paper/start")
+def generate_paper_start(config: PaperConfig = None):
+    """Kicks off generation in the background and returns immediately with
+    a job_id. Poll progress via GET /generate-paper/jobs/{job_id}/stream
+    (Server-Sent Events) instead of waiting on this call."""
+    if get_model() is None:
+        raise HTTPException(status_code=400, detail="GEMINI_API_KEY not set on the server.")
+    cfg = config.dict() if config else DEFAULT_CONFIG
+
+    job_id = str(uuid.uuid4())[:8]
+    _job_create(job_id)
+    threading.Thread(target=_run_generation_job, args=(job_id, cfg), daemon=True).start()
+    return {"job_id": job_id}
+
+
+@api.get("/generate-paper/jobs/{job_id}/stream")
+def stream_generation_job(job_id: str):
+    """Server-Sent Events stream of progress for a job started via
+    /generate-paper/start. Each event is a JSON object with the job's
+    current status and log lines; the stream closes once status is "done"
+    or "error". Frontend usage: `new EventSource(...)` and re-render on
+    each `message` event."""
+    if _job_snapshot(job_id) is None:
+        raise HTTPException(status_code=404, detail="Unknown job_id.")
+
+    def event_stream():
+        sent = 0
+        while True:
+            job = _job_snapshot(job_id)
+            if job is None:
+                break
+            new_lines = job["log"][sent:]
+            sent = len(job["log"])
+            payload = {
+                "status": job["status"],
+                "new_log": new_lines,
+                "paper_id": job.get("paper_id"),
+                "error": job.get("error"),
+            }
+            yield f"data: {json.dumps(payload)}\n\n"
+            if job["status"] in ("done", "error"):
+                break
+            time.sleep(0.6)
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 @api.post("/papers/{paper_id}/edit-question")
@@ -1053,3 +1260,12 @@ def serve_frontend():
 
 if os.path.isdir(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    missing_assets = [
+        f for f in ("favicon-32.png", "favicon-16.png", "favicon-180.png", "favicon.ico")
+        if not os.path.exists(os.path.join(STATIC_DIR, "assets", f))
+    ]
+    if missing_assets:
+        print(f"WARNING: static/assets is missing: {', '.join(missing_assets)}", flush=True)
+else:
+    print(f"WARNING: STATIC_DIR ({STATIC_DIR}) does not exist - /static/* will 404, "
+          f"including the favicon and logo.", flush=True)
