@@ -1237,7 +1237,19 @@ def download_paper(paper_id: str, format: str = "pdf"):
     path = os.path.join(OUTPUT_DIR, f"{paper_id}.{format}")
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"No {format} file found for paper_id={paper_id}")
-    return FileResponse(path, filename=f"{paper_id}.{format}")
+    # PDFs need to render inside the preview <iframe>, which only works with
+    # Content-Disposition: inline. FileResponse defaults to "attachment"
+    # whenever a filename is given, which makes browsers try (and silently
+    # fail) to download the file inside the iframe instead of showing it -
+    # hence a blank preview pane even though the request succeeds.
+    # .tex/.txt keep "attachment" so the explicit download links still
+    # trigger Save-As instead of opening in a new tab.
+    disposition = "inline" if format == "pdf" else "attachment"
+    return FileResponse(
+        path,
+        filename=f"{paper_id}.{format}",
+        content_disposition_type=disposition,
+    )
 
 
 app.include_router(api)
