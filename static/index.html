@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Prashna.ai — CBSE Question Paper Generator</title>
+<title>Prashna.ai</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/static/assets/favicon-32.png" />
 <link rel="icon" type="image/png" sizes="16x16" href="/static/assets/favicon-16.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="/static/assets/favicon-180.png" />
@@ -20,16 +20,23 @@
     --maroon:     #7A1F2B;
     --maroon-dk:  #5E1620;
     --gold:       #A9782E;
+    --gold-soft:  #C9A662;
     --line:       #DAD4C3;
     --line-soft:  #E8E4D6;
     --ready:      #4B6B43;
     --danger:     #9B2C2C;
+    --shadow-sm:  0 1px 2px rgba(28,36,48,0.05);
+    --shadow-md:  0 10px 28px rgba(28,36,48,0.08);
+    --shadow-lg:  0 18px 46px rgba(28,36,48,0.12);
   }
 
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
-    background:var(--paper);
+    background:
+      radial-gradient(1100px 480px at 100% -8%, rgba(169,120,46,0.08), transparent 60%),
+      radial-gradient(900px 420px at -10% 0%, rgba(122,31,43,0.06), transparent 55%),
+      var(--paper);
     color:var(--ink);
     font-family:'IBM Plex Sans', sans-serif;
     font-size:14px;
@@ -42,7 +49,7 @@
 
   a{ color:var(--maroon); }
 
-  button{ font-family:inherit; cursor:pointer; }
+  button{ font-family:inherit; cursor:pointer; transition:background-color .15s ease, color .15s ease, border-color .15s ease, transform .1s ease, box-shadow .15s ease; }
   button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible{
     outline:2px solid var(--gold); outline-offset:2px;
   }
@@ -53,11 +60,20 @@
     background:transparent;
     border:none;
     border-bottom:1px solid var(--line);
-    padding:6px 2px;
+    padding:7px 2px;
     width:100%;
+    transition:border-color .15s ease;
   }
   input:hover, select:hover{ border-bottom-color:var(--ink-soft); }
   input:focus, select:focus{ border-bottom-color:var(--maroon); }
+
+  select{
+    appearance:none; -webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0 L5 6 L10 0 Z' fill='%235B6472'/></svg>");
+    background-repeat:no-repeat;
+    background-position:right 2px center;
+    padding-right:18px;
+  }
 
   .label{
     font-size:12px;
@@ -65,6 +81,9 @@
     color:var(--ink-soft);
     margin-bottom:4px;
     display:block;
+  }
+  .field-note{
+    font-size:11.5px; color:var(--ink-soft); margin-top:5px; font-style:italic;
   }
 
   .shell{ max-width:1180px; margin:0 auto; padding:28px 32px 80px; }
@@ -74,36 +93,56 @@
     display:flex; align-items:center; justify-content:space-between;
     padding-bottom:20px; margin-bottom:28px;
     border-bottom:1px solid var(--line);
+    position:relative;
   }
-  .brand{ display:flex; align-items:center; gap:10px; }
-  .brand-mark{ flex:none; width:34px; height:34px; object-fit:contain; }
-  .brand h1{ font-size:24px; font-style:italic; letter-spacing:-0.01em; }
+  .topbar::after{
+    content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px;
+    background:linear-gradient(90deg, var(--maroon) 0%, var(--gold-soft) 55%, transparent 100%);
+    opacity:.75;
+  }
+  .brand{ display:flex; align-items:center; gap:11px; }
+  .brand-mark{ flex:none; width:36px; height:36px; object-fit:contain; filter:drop-shadow(0 2px 4px rgba(28,36,48,0.15)); }
+  .brand h1{ font-size:25px; font-style:italic; letter-spacing:-0.01em; }
   .brand .sub{ font-size:12px; color:var(--ink-soft); margin-top:1px; }
 
-  .status-row{ display:flex; align-items:center; gap:18px; }
-  .status-pill{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-soft); }
-  .dot{ width:7px; height:7px; border-radius:50%; background:var(--line); flex:none; }
-  .dot.on{ background:var(--ready); }
-  .dot.off{ background:var(--danger); }
+  .status-row{ display:flex; align-items:center; gap:10px; }
+  .status-pill{
+    display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-soft);
+    background:var(--paper-card); border:1px solid var(--line-soft);
+    padding:5px 10px; border-radius:20px;
+  }
+  .dot{ width:7px; height:7px; border-radius:50%; background:var(--line); flex:none; transition:background-color .2s ease; }
+  .dot.on{ background:var(--ready); box-shadow:0 0 0 3px rgba(75,107,67,0.15); }
+  .dot.off{ background:var(--danger); box-shadow:0 0 0 3px rgba(155,44,44,0.12); }
   .ghost-btn{
     background:none; border:1px solid var(--line); color:var(--ink-soft);
-    font-size:12.5px; padding:6px 12px; border-radius:3px;
+    font-size:12.5px; padding:7px 13px; border-radius:20px;
   }
-  .ghost-btn:hover{ border-color:var(--ink-soft); color:var(--ink); }
+  .ghost-btn:hover{ border-color:var(--maroon); color:var(--maroon); }
 
   /* ---------- Layout ---------- */
-  .grid{ display:grid; grid-template-columns:380px 1fr; gap:32px; align-items:start; }
+  .grid{ display:grid; grid-template-columns:390px 1fr; gap:32px; align-items:start; }
   @media (max-width:880px){ .grid{ grid-template-columns:1fr; } }
 
-  .panel{ margin-bottom:28px; }
+  .panel{
+    margin-bottom:22px;
+    background:var(--paper-card);
+    border:1px solid var(--line-soft);
+    border-radius:8px;
+    padding:20px 20px 22px;
+    box-shadow:var(--shadow-sm);
+    transition:box-shadow .2s ease;
+  }
+  .panel:hover{ box-shadow:var(--shadow-md); }
   .panel-head{
     display:flex; align-items:baseline; justify-content:space-between;
-    margin-bottom:14px;
+    margin-bottom:16px;
   }
   .panel-title{
     font-family:'IBM Plex Sans', sans-serif;
-    font-size:13px; font-weight:600; letter-spacing:0.04em;
-    color:var(--ink-soft);
+    font-size:12.5px; font-weight:600; letter-spacing:0.06em;
+    color:var(--maroon-dk);
+    text-transform:uppercase;
   }
   .panel-hint{ font-size:12px; color:var(--ink-soft); }
   .panel-hint button{ background:none; border:none; color:var(--maroon); font-size:12px; padding:0; text-decoration:underline; }
@@ -118,8 +157,10 @@
     display:inline-flex; align-items:center; gap:6px;
     border:1px solid var(--line); border-radius:20px;
     padding:3px 6px 3px 12px; font-size:12.5px; color:var(--ink);
-    background:var(--paper-card);
+    background:#fff;
+    transition:border-color .15s ease, box-shadow .15s ease;
   }
+  .chip:hover{ border-color:var(--gold-soft); box-shadow:var(--shadow-sm); }
   .chip button{
     background:none; border:none; color:var(--ink-soft); font-size:14px;
     width:18px; height:18px; border-radius:50%; line-height:1;
@@ -137,30 +178,38 @@
   /* ---------- Sections ledger ---------- */
   .ledger{ width:100%; border-collapse:collapse; }
   .ledger th{
-    text-align:left; font-size:11px; letter-spacing:0.03em; color:var(--ink-soft);
-    font-weight:500; padding:0 6px 6px 0; border-bottom:1px solid var(--line);
+    text-align:left; font-size:10.5px; letter-spacing:0.03em; color:var(--ink-soft);
+    font-weight:600; text-transform:uppercase; padding:0 6px 7px 0; border-bottom:1px solid var(--line);
   }
-  .ledger td{ padding:8px 6px 8px 0; border-bottom:1px solid var(--line-soft); vertical-align:middle; }
+  .ledger td{ padding:9px 6px 9px 0; border-bottom:1px solid var(--line-soft); vertical-align:middle; }
+  .ledger tr:hover td{ background:rgba(169,120,46,0.04); }
   .ledger td input, .ledger td select{ font-size:13px; border-bottom:1px solid transparent; }
   .ledger td input:hover, .ledger td select:hover{ border-bottom-color:var(--line); }
-  .ledger .num{ width:52px; }
+  .ledger .num{ width:50px; }
+  .ledger .choice{ width:44px; text-align:center; }
+  .ledger td input[type="checkbox"]{
+    width:16px; height:16px; accent-color:var(--maroon); cursor:pointer; padding:0; border:none;
+  }
   .ledger .rm{
     background:none; border:none; color:var(--ink-soft); font-size:16px; line-height:1; padding:2px 6px;
   }
   .ledger .rm:hover{ color:var(--danger); }
 
   .totals{ display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:13px; }
-  .totals.ok{ color:var(--ink-soft); }
+  .totals.ok{ color:var(--ready); }
   .totals.mismatch{ color:var(--maroon); }
 
   /* ---------- Buttons ---------- */
   .btn-primary{
-    width:100%; background:var(--maroon); color:#FBF9F4; border:none;
-    padding:12px 16px; font-size:14px; font-weight:500; border-radius:3px;
-    margin-top:6px; position:relative; overflow:hidden;
+    width:100%; background:linear-gradient(180deg, var(--maroon) 0%, var(--maroon-dk) 100%);
+    color:#FBF9F4; border:none;
+    padding:13px 16px; font-size:14px; font-weight:500; border-radius:6px;
+    margin-top:8px; position:relative; overflow:hidden;
+    box-shadow:0 4px 14px rgba(122,31,43,0.28);
   }
-  .btn-primary:hover{ background:var(--maroon-dk); }
-  .btn-primary[disabled]{ background:var(--line); color:var(--ink-soft); cursor:wait; }
+  .btn-primary:hover{ transform:translateY(-1px); box-shadow:0 8px 20px rgba(122,31,43,0.34); }
+  .btn-primary:active{ transform:translateY(0); }
+  .btn-primary[disabled]{ background:var(--line); color:var(--ink-soft); cursor:wait; box-shadow:none; transform:none; }
   .btn-primary .bar{
     position:absolute; left:0; bottom:0; height:2px; background:var(--gold);
     width:0%; transition:width 20s linear;
@@ -169,7 +218,7 @@
 
   .btn-outline{
     background:none; border:1px solid var(--maroon); color:var(--maroon);
-    padding:9px 14px; font-size:13px; border-radius:3px; white-space:nowrap;
+    padding:9px 14px; font-size:13px; border-radius:6px; white-space:nowrap;
   }
   .btn-outline:hover{ background:var(--maroon); color:#fff; }
   .btn-outline[disabled]{ border-color:var(--line); color:var(--ink-soft); cursor:not-allowed; background:none; }
@@ -179,8 +228,8 @@
     background:var(--paper-card);
     border:1px solid var(--line);
     border-top:3px solid var(--maroon);
-    border-radius:2px;
-    box-shadow:0 1px 2px rgba(28,36,48,0.05), 0 10px 28px rgba(28,36,48,0.07);
+    border-radius:6px;
+    box-shadow:var(--shadow-md);
     padding:22px 24px;
   }
   .letterhead{ text-align:center; padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--line); }
@@ -189,7 +238,7 @@
   .letterhead .meta{ font-size:12px; color:var(--ink-soft); margin-top:4px; }
   .letterhead.empty .subject{ color:var(--ink-soft); font-style:italic; }
 
-  .pdf-frame{ width:100%; height:560px; border:1px solid var(--line-soft); background:#fff; }
+  .pdf-frame{ width:100%; height:560px; border:1px solid var(--line-soft); background:#fff; border-radius:4px; }
 
   .empty-preview{
     display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -199,10 +248,11 @@
   .empty-preview p{ font-size:13.5px; max-width:280px; margin:0; }
 
   .download-row{ display:flex; gap:0; margin-top:14px; font-size:13px; }
-  .download-row a{ padding:0 14px; text-decoration:none; }
+  .download-row a{ padding:0 14px; text-decoration:none; transition:color .15s ease; }
   .download-row a:first-child{ padding-left:0; }
   .download-row a:not(:last-child){ border-right:1px solid var(--line); }
   .download-row a.disabled{ color:var(--line); pointer-events:none; }
+  .download-row a:not(.disabled):hover{ color:var(--maroon-dk); }
 
   details.source-view{ margin-top:16px; }
   details.source-view summary{ font-size:12.5px; color:var(--ink-soft); cursor:pointer; }
@@ -210,7 +260,7 @@
   details.source-view pre{
     margin-top:10px; max-height:280px; overflow:auto; background:var(--ink);
     color:#E7E2D3; font-family:'IBM Plex Mono', monospace; font-size:12px;
-    padding:14px; border-radius:3px; white-space:pre-wrap; word-break:break-word;
+    padding:14px; border-radius:6px; white-space:pre-wrap; word-break:break-word;
   }
 
   /* ---------- Refine + history ---------- */
@@ -223,12 +273,14 @@
   .history-list li{
     display:flex; justify-content:space-between; align-items:center;
     padding:10px 0; border-bottom:1px solid var(--line-soft);
-    font-size:13px; cursor:pointer;
+    font-size:13px; cursor:pointer; transition:background-color .15s ease;
   }
+  .history-list li:hover{ background:rgba(169,120,46,0.05); }
   .history-list li:hover .hist-subject{ color:var(--maroon); }
   .history-list li.stale{ opacity:0.45; cursor:default; }
+  .history-list li.stale:hover{ background:none; }
   .hist-left{ display:flex; flex-direction:column; }
-  .hist-subject{ color:var(--ink); }
+  .hist-subject{ color:var(--ink); transition:color .15s ease; }
   .hist-meta{ font-size:11.5px; color:var(--ink-soft); margin-top:1px; }
   .hist-time{ font-size:11.5px; color:var(--ink-soft); }
   .empty-note{ font-size:13px; color:var(--ink-soft); font-style:italic; }
@@ -237,12 +289,13 @@
   .notice{
     border-left:3px solid var(--maroon); background:var(--paper-card);
     padding:12px 16px; margin-bottom:24px; font-size:13px; display:none;
+    border-radius:0 6px 6px 0; box-shadow:var(--shadow-sm);
   }
   .notice.show{ display:block; }
   .notice .head{ display:flex; justify-content:space-between; gap:16px; }
   .notice .msg{ color:var(--ink); }
   .notice code{ display:block; margin-top:8px; font-family:'IBM Plex Mono', monospace; font-size:11.5px;
-    color:var(--ink-soft); background:var(--paper); padding:8px 10px; border-radius:2px; max-height:120px; overflow:auto; }
+    color:var(--ink-soft); background:var(--paper); padding:8px 10px; border-radius:4px; max-height:120px; overflow:auto; }
   .notice .dismiss{ background:none; border:none; color:var(--ink-soft); font-size:12px; text-decoration:underline; flex:none; }
 
   footer{ margin-top:56px; padding-top:16px; border-top:1px solid var(--line); font-size:12px; color:var(--ink-soft); }
@@ -298,7 +351,9 @@
 
         <div class="field">
           <label class="label">Subject</label>
-          <input id="f-subject" value="Mathematics" />
+          <select id="f-subject-select"></select>
+          <input id="f-subject-custom" placeholder="Type a custom subject name" style="display:none; margin-top:8px;" />
+          <div class="field-note" id="subject-note">&nbsp;</div>
         </div>
 
         <div class="field-row">
@@ -316,7 +371,7 @@
           <label class="label">Model</label>
           <select id="f-model">
             <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite — free tier</option>
-            <option value="gemini-3.1-flash">gemini-3.1-flash — free tier, higher quality</option>
+            <option value="gemini-3.5-flash">gemini-3.5-flash — free tier, higher quality</option>
             <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview — requires billing</option>
           </select>
         </div>
@@ -333,7 +388,7 @@
           <label class="label">Sections</label>
           <table class="ledger">
             <thead>
-              <tr><th>Name</th><th>Type</th><th>Qs</th><th>Marks</th><th>Difficulty</th><th></th></tr>
+              <tr><th>Name</th><th>Type</th><th>Qs</th><th>Marks</th><th>Difficulty</th><th class="choice">Choice</th><th></th></tr>
             </thead>
             <tbody id="sections-body"></tbody>
           </table>
@@ -413,30 +468,102 @@
 (function(){
   "use strict";
 
-  const DEFAULT_CONFIG = {
+  const BASE_DEFAULTS = {
     board: "CBSE",
     class_name: "10",
-    subject: "Mathematics",
     duration_minutes: 180,
     max_marks: 80,
     model_name: "gemini-3.1-flash-lite",
-    topics: ["Real Numbers","Polynomials","Quadratic Equations","Triangles","Coordinate Geometry","Trigonometry","Circles","Statistics","Probability"],
-    sections: [
-      {name:"Section A", question_type:"MCQ", num_questions:4, marks_each:1, difficulty:"easy"},
-      {name:"Section B", question_type:"Short Answer", num_questions:3, marks_each:2, difficulty:"medium"},
-      {name:"Section C", question_type:"Short Answer", num_questions:2, marks_each:3, difficulty:"medium"},
-      {name:"Section D", question_type:"Long Answer", num_questions:2, marks_each:5, difficulty:"hard"},
-      {name:"Section E", question_type:"Case Study", num_questions:1, marks_each:4, difficulty:"mixed"},
-    ],
   };
 
-  const QUESTION_TYPES = ["MCQ","Very Short Answer","Short Answer","Long Answer","Case Study","Assertion-Reason"];
+  const QUESTION_TYPES = ["MCQ","Assertion-Reason","Very Short Answer","Short Answer","Long Answer","Case Study"];
   const DIFFICULTIES = ["easy","medium","hard","mixed"];
 
-  let state = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  // state.topics / state.sections start empty and are populated from the
+  // server's curated subject library once it responds - nothing about a
+  // subject's topic list or section blueprint is hardcoded in this file.
+  let state = { ...BASE_DEFAULTS, subject: "Mathematics", topics: [], sections: [] };
+  let curatedSubjects = [];
   let currentPaperId = null;
 
   const $ = (id) => document.getElementById(id);
+
+  // ---------------- Subject curation ----------------
+  function populateSubjectSelect(){
+    const sel = $("f-subject-select");
+    sel.innerHTML = "";
+    curatedSubjects.forEach(s => {
+      const o = document.createElement("option");
+      o.value = s; o.textContent = s;
+      sel.appendChild(o);
+    });
+    const customOpt = document.createElement("option");
+    customOpt.value = "__custom__";
+    customOpt.textContent = "Other (type your own)";
+    sel.appendChild(customOpt);
+    sel.value = curatedSubjects.includes(state.subject) ? state.subject : "__custom__";
+    syncCustomSubjectVisibility();
+  }
+
+  function syncCustomSubjectVisibility(){
+    const isCustom = $("f-subject-select").value === "__custom__";
+    $("f-subject-custom").style.display = isCustom ? "block" : "none";
+    if (isCustom && !curatedSubjects.includes(state.subject)){
+      $("f-subject-custom").value = state.subject || "";
+    }
+    $("subject-note").textContent = isCustom
+      ? "Custom subject — add your own topics and sections below."
+      : `Loaded curated CBSE Class ${state.class_name || "10"} ${state.subject} topics & structure. Fully editable.`;
+  }
+
+  async function loadSubjectTemplate(subject, opts){
+    opts = opts || {};
+    try{
+      const resp = await fetch(`/api/subjects/${encodeURIComponent(subject)}/template`);
+      if (!resp.ok) throw new Error("no curated template");
+      const data = await resp.json();
+      state.topics = data.topics.slice();
+      state.sections = data.sections.map(s => ({ ...s, internal_choice: !!s.internal_choice }));
+      renderTopics();
+      renderSections();
+    } catch(e){
+      if (!opts.silent) {
+        // No curated template for this subject - leave whatever topics/sections
+        // are already there so the teacher can build from scratch.
+      }
+    }
+    syncCustomSubjectVisibility();
+  }
+
+  $("f-subject-select").addEventListener("change", async (e) => {
+    if (e.target.value === "__custom__"){
+      syncCustomSubjectVisibility();
+      return;
+    }
+    state.subject = e.target.value;
+    await loadSubjectTemplate(state.subject);
+  });
+
+  $("f-subject-custom").addEventListener("input", (e) => {
+    state.subject = e.target.value.trim() || "General";
+  });
+
+  $("f-class").addEventListener("input", (e) => {
+    state.class_name = e.target.value.trim() || "10";
+    syncCustomSubjectVisibility();
+  });
+
+  async function initSubjects(){
+    try{
+      const resp = await fetch("/api/subjects");
+      const data = await resp.json();
+      curatedSubjects = data.subjects || [];
+    } catch(e){
+      curatedSubjects = [];
+    }
+    populateSubjectSelect();
+    await loadSubjectTemplate(state.subject, { silent: true });
+  }
 
   // ---------------- Rendering ----------------
   function renderTopics(){
@@ -503,13 +630,22 @@
       selDiff.addEventListener("change", e => { state.sections[i].difficulty = e.target.value; });
       tdDiff.appendChild(selDiff);
 
+      const tdChoice = document.createElement("td");
+      tdChoice.className = "choice";
+      const chkChoice = document.createElement("input");
+      chkChoice.type = "checkbox";
+      chkChoice.title = "Internal choice (OR) for every question in this section";
+      chkChoice.checked = !!s.internal_choice;
+      chkChoice.addEventListener("change", e => { state.sections[i].internal_choice = e.target.checked; });
+      tdChoice.appendChild(chkChoice);
+
       const tdRm = document.createElement("td");
       const btnRm = document.createElement("button");
       btnRm.className = "rm"; btnRm.textContent = "×"; btnRm.type = "button";
       btnRm.addEventListener("click", () => { state.sections.splice(i, 1); renderSections(); renderTotals(); });
       tdRm.appendChild(btnRm);
 
-      tr.append(tdName, tdType, tdCount, tdMarks, tdDiff, tdRm);
+      tr.append(tdName, tdType, tdCount, tdMarks, tdDiff, tdChoice, tdRm);
       body.appendChild(tr);
     });
     renderTotals();
@@ -526,10 +662,10 @@
   function fillFormFromState(){
     $("f-board").value = state.board;
     $("f-class").value = state.class_name;
-    $("f-subject").value = state.subject;
     $("f-duration").value = state.duration_minutes;
     $("f-maxmarks").value = state.max_marks;
     $("f-model").value = state.model_name;
+    populateSubjectSelect();
     renderTopics();
     renderSections();
   }
@@ -538,7 +674,7 @@
     return {
       board: $("f-board").value.trim() || "CBSE",
       class_name: $("f-class").value.trim() || "10",
-      subject: $("f-subject").value.trim() || "General",
+      subject: state.subject || "General",
       duration_minutes: parseInt($("f-duration").value || "180", 10),
       max_marks: parseInt($("f-maxmarks").value || "80", 10),
       model_name: $("f-model").value,
@@ -713,15 +849,20 @@
   });
 
   $("btn-add-section").addEventListener("click", () => {
-    state.sections.push({ name: `Section ${String.fromCharCode(65 + state.sections.length)}`, question_type: "Short Answer", num_questions: 1, marks_each: 2, difficulty: "medium" });
+    state.sections.push({
+      name: `Section ${String.fromCharCode(65 + state.sections.length)}`,
+      question_type: "Short Answer", num_questions: 1, marks_each: 2,
+      difficulty: "medium", internal_choice: false,
+    });
     renderSections();
   });
 
   $("f-maxmarks").addEventListener("input", renderTotals);
 
-  $("btn-reset").addEventListener("click", () => {
-    state = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  $("btn-reset").addEventListener("click", async () => {
+    state = { ...BASE_DEFAULTS, subject: "Mathematics", topics: [], sections: [] };
     fillFormFromState();
+    await loadSubjectTemplate(state.subject, { silent: true });
     hideError();
   });
 
@@ -817,6 +958,7 @@
 
   // ---------------- Init ----------------
   fillFormFromState();
+  initSubjects();
   loadHealth();
   renderHistory();
 })();
