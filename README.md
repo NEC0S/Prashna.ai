@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="static/assets/readme_logo.png" width="130" alt="Prashna.ai logo" />
+  <img src="static/assets/readme_logo.png" width="450" alt="Prashna.ai logo" />
 </p>
 
 <h1 align="center">Prashna.ai</h1>
