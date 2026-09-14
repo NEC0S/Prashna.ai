@@ -1,8 +1,7 @@
 <p align="center">
-  <img src="static/assets/readme_logo.png" width="450" alt="Prashna.ai logo" />
+  <img src="static/assets/readme_logo.png" width="750" alt="Prashna.ai logo" />
 </p>
 
-<h1 align="center">Prashna.ai</h1>
 <p align="center"><em>AI-powered question paper generator — configure a blueprint, generate a fully typeset exam paper, and refine any question on demand.</em></p>
 
 <p align="center">
