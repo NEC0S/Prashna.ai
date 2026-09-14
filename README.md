@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">Prashna.ai</h1>
-<p align="center"><em>AI-powered CBSE question paper generator — configure a blueprint, generate a fully typeset exam paper, and refine any question on demand.</em></p>
+<p align="center"><em>AI-powered question paper generator — configure a blueprint, generate a fully typeset exam paper, and refine any question on demand.</em></p>
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" />
@@ -35,22 +35,7 @@ Under the hood, a [LangGraph](https://github.com/langchain-ai/langgraph) pipelin
 
 ## Demo
 
-> 🎬 **Add your demo video here.** Drop the video file into the repo (or a GitHub release/issue to get a hosted URL) and either embed it directly or link a thumbnail to it, e.g.:
->
-> ```markdown
-> https://github.com/<user>/<repo>/assets/<id>/<video-id>.mp4
-> ```
->
-> or, linking out to YouTube:
->
-> ```markdown
-> [![Watch the demo](docs/demo-thumbnail.png)](https://youtu.be/your-video-id)
-> ```
-
-<p align="center">
-  <!-- Replace this line with your embedded video or thumbnail link once uploaded -->
-  <img src="docs/screenshot.png" width="800" alt="Prashna.ai interface" />
-</p>
+https://github.com/user-attachments/assets/dff9ffad-0ed4-4df5-810d-f8464aac9cce
 
 ---
 
