@@ -24,6 +24,9 @@
 
 ---
 
+
+## Link : prashna-ai-043g.onrender.com/
+
 ## Overview
 
 **Prashna.ai** turns a short configuration — board, class, subject, topics, and a section blueprint — into a complete, print-ready CBSE exam paper: MCQs, Assertion-Reason, Very Short/Short/Long Answer, and Case Study sections, each with correctly weighted marks, an accurate difficulty split, internal-choice handling, and auto-generated diagrams, compiled straight to PDF.
