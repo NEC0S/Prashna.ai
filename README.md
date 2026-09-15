@@ -24,8 +24,14 @@
 
 ---
 
+## 🌐 Live Demo
 
-## Link : prashna-ai-043g.onrender.com/
+> **Try the application:**  
+> 👉 [Prashna AI](https://prashna-ai-043g.onrender.com/)
+
+**Deployment:** Render
+
+---
 
 ## Overview
 
