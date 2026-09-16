@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="#demo">Demoo</a> •
+  <a href="#demo">Demo</a> •
   <a href="#key-features">Features</a> •
   <a href="#how-it-works">How it works</a> •
   <a href="#getting-started">Getting Started</a> •
